@@ -1,5 +1,17 @@
 /* eslint-disable vue/multi-word-component-names */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * 1.peerDependencies 是对特定包的版本依赖，由调用方提供，避免产生依赖冲突
+ * 2.vue-demi是根据vue环境提供对应能力，可以用来开发支持vue2/3的库，组件等
+ * 3.假设物料是基于vue-demi开发的，下面是判断规则
+ *  3.1 <=2.6: exports from vue + @vue/composition-api with plugin auto installing.
+    2.7: exports from vue (Composition API is built-in in Vue 2.7).
+    >=3.0: exports from vue, with polyfill of Vue 2's set and del API.
+ * 4. 所以在一定场景下vue2.6,2.7是可以支持组合式api
+ * 5. 将类型或接口的引入与其他的引入分开，能够更好地说明开发者的意图和意义，避免在代码中引入不必要的代码
+ * 6. v-bind="$attrs" 遇到 inheritAttrs: false 需要属性透传手动绑定
+ *
+ */
 import {
   defineComponent,
   shallowRef,
@@ -13,10 +25,11 @@ import {
   nextTick,
   watchEffect,
   getCurrentInstance,
-  Vue2,
-  type PropType,
-  type InjectionKey
+  Vue2
+  // type PropType,
+  // type InjectionKey
 } from "vue-demi";
+import type { PropType, InjectionKey } from "vue-demi";
 import { init as initChart } from "echarts/core";
 import type {
   EChartsType,
@@ -38,7 +51,9 @@ import {
   loadingProps
 } from "./composables";
 import { omitOn, unwrapInjected } from "./utils";
-import { register, TAG_NAME, type EChartsElement } from "./wc";
+import { register, TAG_NAME } from "./wc";
+import type { EChartsElement } from "./wc";
+
 import "./style.css";
 
 const wcRegistered = register();
@@ -56,6 +71,7 @@ export { LOADING_OPTIONS_KEY } from "./composables";
 
 export default defineComponent({
   name: "echarts",
+  // 定义输入参数
   props: {
     option: Object as PropType<Option>,
     theme: {
@@ -71,6 +87,7 @@ export default defineComponent({
   emits: {} as unknown as Emits,
   inheritAttrs: false,
   setup(props, { attrs }) {
+    // 响应式dom
     const root = shallowRef<EChartsElement>();
     const chart = shallowRef<EChartsType>();
     const manualOption = shallowRef<Option>();
@@ -101,13 +118,17 @@ export default defineComponent({
       if (!root.value) {
         return;
       }
-
+      /**
+       * init 方法见函数签名：dom|theme|options
+       * 处理初始化操作
+       *
+       */
       const instance = (chart.value = initChart(
         root.value,
         realTheme.value,
         realInitOptions.value
       ));
-
+      // 设置分组属性
       if (props.group) {
         instance.group = props.group;
       }
@@ -132,7 +153,7 @@ export default defineComponent({
             realListeners[event] = attrs[key];
           });
       }
-
+      // 绑定事件处理
       Object.keys(realListeners).forEach(key => {
         let handler = realListeners[key];
 
